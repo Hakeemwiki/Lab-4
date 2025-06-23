@@ -31,3 +31,35 @@ SELECT
 FROM RankedMetrics
 WHERE rn = 1;
 
+--  3. Top 5 Most Active Users (by number of transactions)
+SELECT 
+  user_id,
+  first_name,
+  last_name,
+  total_transactions,
+  total_rental_hours,
+  total_spent
+FROM user_user_metrics
+ORDER BY total_transactions DESC
+LIMIT 5;
+
+
+-- 4. Top 5 Users by Total Spending
+SELECT 
+  user_id,
+  first_name,
+  last_name,
+  total_spent,
+  total_transactions,
+  total_rental_hours
+FROM user_user_metrics
+ORDER BY total_spent DESC
+LIMIT 5;
+
+-- 5. Daily Rental Transaction & Revenue Trends
+SELECT 
+  rental_date,
+  daily_transaction_count,
+  daily_revenue
+FROM daily_daily_metrics
+ORDER BY rental_date;
