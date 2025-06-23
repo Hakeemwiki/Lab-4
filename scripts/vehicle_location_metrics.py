@@ -50,3 +50,34 @@ try:
 except Exception as e:
     logger.error(f"Error loading input data: {e}")
     sys.exit(1)
+
+# -----------------------------------------
+# Type Casting and Feature Engineering
+# -----------------------------------------
+rentals = rentals \
+    .withColumn("total_amount", col("total_amount").cast("double")) \
+    .withColumn("rental_start_time", unix_timestamp("rental_start_time", "yyyy-MM-dd HH:mm:ss")) \
+    .withColumn("rental_end_time", unix_timestamp("rental_end_time", "yyyy-MM-dd HH:mm:ss")) \
+    .withColumn("rental_duration_hours", (col("rental_end_time") - col("rental_start_time")) / 3600) \
+    .withColumn("pickup_location", col("pickup_location").cast("int"))
+
+# -----------------------------------------
+# Join with Vehicles
+# -----------------------------------------
+vehicles = vehicles.withColumn("vehicle_id", col("vehicle_id").cast("string"))
+joined_df = rentals.join(vehicles.select("vehicle_id", "vehicle_type"), on="vehicle_id", how="left")
+
+# -----------------------------------------
+# Aggregate Metrics by Pickup Location and Vehicle Type
+# -----------------------------------------
+vehicle_metrics = joined_df.groupBy("pickup_location", "vehicle_type") \
+    .agg(
+        round(spark_sum("total_amount"), 2).alias("total_revenue"), 
+        count("*").alias("total_transactions"),
+        round(avg("total_amount"), 2).alias("avg_transaction"),
+        spark_max("total_amount").alias("max_transaction"),
+        spark_min("total_amount").alias("min_transaction"),
+        countDistinct("vehicle_id").alias("unique_vehicles_used"),
+        round(avg("rental_duration_hours"), 2).alias("avg_rental_duration_hours"),
+        round(spark_sum("rental_duration_hours"), 2).alias("total_rental_hours")
+    )
