@@ -95,3 +95,16 @@ final_df = final_df.select(
     "avg_transaction", "max_transaction", "min_transaction",
     "unique_vehicles_used", "avg_rental_duration_hours", "total_rental_hours"
 )
+
+# -----------------------------------------
+# Save Output to S3 in Parquet Format
+# -----------------------------------------
+try:
+    final_df.write.mode("overwrite").parquet(f"{output_path}/vehicle_location_metrics/")
+    logger.info("Successfully wrote enriched vehicle-location metrics to S3.")
+except Exception as e:
+    logger.error(f"Error writing output: {e}")
+    sys.exit(1)
+
+spark.stop()
+
