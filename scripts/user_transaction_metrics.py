@@ -49,3 +49,18 @@ try:
 except Exception as e:
     logger.error(f"Error loading data: {e}")
     sys.exit(1) 
+
+# -----------------------------------------
+# Data Type Casting and Enrichment
+# -----------------------------------------
+rentals = rentals \
+    .withColumn("total_amount", col("total_amount").cast("double")) \
+    .withColumn("rental_start_time", unix_timestamp("rental_start_time", "yyyy-MM-dd HH:mm:ss")) \
+    .withColumn("rental_end_time", unix_timestamp("rental_end_time", "yyyy-MM-dd HH:mm:ss")) \
+    .withColumn("rental_duration_hours", (col("rental_end_time") - col("rental_start_time")) / 3600) \
+    .withColumn("rental_date", to_date((col("rental_start_time").cast("timestamp"))))
+
+# -----------------------------------------
+# Join with Users
+# -----------------------------------------
+rental_user_df = rentals.join(users, on="user_id", how="left") # Left join to include all rentals
