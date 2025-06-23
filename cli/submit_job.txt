@@ -1,0 +1,42 @@
+aws emr-serverless start-job-run \
+  --application-id 00ftforfooeca71d \
+  --execution-role-arn arn:aws:iam::396468676537:role/s3-full-access \
+  --job-driver '{
+    "sparkSubmit": {
+      "entryPoint": "s3://car-rentals-data/scripts/vehicle_location_metrics.py",
+      "entryPointArguments": [
+        "s3://car-rentals-data/raw/",
+        "s3://car-rentals-data/processed/"
+      ]
+    }
+  }' \
+  --configuration-overrides '{
+    "monitoringConfiguration": {
+      "s3MonitoringConfiguration": {
+        "logUri": "s3://car-rentals-data/logs/"
+      }
+    }
+  }'
+
+
+aws emr-serverless start-job-run \
+  --application-id 00ftforfooeca71d \
+  --execution-role-arn arn:aws:iam::396468676537:role/s3-full-access \
+  --job-driver '{
+    "sparkSubmit": {
+      "entryPoint": "s3://car-rentals-data/scripts/user_transaction_metrics.py",
+      "entryPointArguments": [
+        "s3://car-rentals-data/raw/",
+        "s3://car-rentals-data/processed/"
+      ]
+    }
+  }' \
+  --configuration-overrides '{
+    "monitoringConfiguration": {
+      "s3MonitoringConfiguration": {
+        "logUri": "s3://car-rentals-data/logs/"
+      }
+    }
+  }'
+
+
