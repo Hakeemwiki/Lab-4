@@ -63,3 +63,22 @@ SELECT
   daily_revenue
 FROM daily_daily_metrics
 ORDER BY rental_date;
+
+-- 6. Day with the Highest Revenue
+SELECT 
+  rental_date,
+  daily_revenue
+FROM daily_daily_metrics
+ORDER BY daily_revenue DESC
+LIMIT 1;
+
+
+-- 7. Top Locations with Highest Rental Duration (Total Hours)
+SELECT 
+  pickup_location,
+  location_name,
+  vehicle_type,
+  total_rental_hours
+FROM vlm_vehicle_location_metrics
+ORDER BY total_rental_hours DESC
+LIMIT 5;
