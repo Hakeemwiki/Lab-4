@@ -81,3 +81,17 @@ vehicle_metrics = joined_df.groupBy("pickup_location", "vehicle_type") \
         round(avg("rental_duration_hours"), 2).alias("avg_rental_duration_hours"),
         round(spark_sum("rental_duration_hours"), 2).alias("total_rental_hours")
     )
+
+# -----------------------------------------
+# Join with Locations for Human-Readable Info
+# -----------------------------------------
+locations = locations.withColumn("location_id", col("location_id").cast("int"))
+final_df = vehicle_metrics.join(locations, vehicle_metrics.pickup_location == locations.location_id, "left")
+
+# Select Final Columns
+final_df = final_df.select(
+    "pickup_location", "location_name", "city", "state",
+    "vehicle_type", "total_revenue", "total_transactions",
+    "avg_transaction", "max_transaction", "min_transaction",
+    "unique_vehicles_used", "avg_rental_duration_hours", "total_rental_hours"
+)
