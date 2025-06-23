@@ -64,3 +64,39 @@ rentals = rentals \
 # Join with Users
 # -----------------------------------------
 rental_user_df = rentals.join(users, on="user_id", how="left") # Left join to include all rentals
+
+
+# -----------------------------------------
+# DAILY KPIs
+# -----------------------------------------
+daily_kpis = rental_user_df.groupBy("rental_date") \
+    .agg(
+        count("*").alias("daily_transaction_count"),
+        spark_sum("total_amount").alias("daily_revenue")
+    )
+
+# -----------------------------------------
+# USER KPIs
+# -----------------------------------------
+user_kpis = rental_user_df.groupBy("user_id", "first_name", "last_name", "email") \
+    .agg(
+        count("*").alias("total_transactions"),
+        round(spark_sum("total_amount"), 2).alias("total_spent"),
+        round(avg("total_amount"), 2).alias("avg_transaction_value"),
+        spark_max("total_amount").alias("max_transaction"),
+        spark_min("total_amount").alias("min_transaction"),
+        round(spark_sum("rental_duration_hours"), 2).alias("total_rental_hours")
+    )
+
+# -----------------------------------------
+# Save to S3 as Parquet
+# -----------------------------------------
+try:
+    daily_kpis.write.mode("overwrite").parquet(f"{output_path}/daily_metrics/") # Save daily KPIs
+    user_kpis.write.mode("overwrite").parquet(f"{output_path}/user_metrics/") # Save user KPIs
+    logger.info("Successfully wrote user and daily metrics to S3.")
+except Exception as e:
+    logger.error(f"Failed to write output: {e}")
+    sys.exit(1) # Exit if writing fails
+
+spark.stop() # Stop the Spark session
