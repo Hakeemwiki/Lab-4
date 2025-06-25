@@ -67,7 +67,8 @@ Raw data is stored in Amazon S3 under the prefix `s3://car-rentals-data/raw/` in
 The pipeline follows a modular, serverless architecture to ensure scalability and ease of maintenance.
 
 ### Architecture Diagram
-![alt text](docs/Lab-4-Architecture-new.png)
+
+![alt text](docs/Lab4_architecture.drawio.svg)
 
 ### Key Components:
 
