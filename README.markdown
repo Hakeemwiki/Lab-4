@@ -196,8 +196,7 @@ A Step Functions state machine automates the pipeline:
 3. **Execute Athena Queries**: Runs predefined SQL queries for daily insights.
 4. **Handle Errors**: Implements retry logic (up to 3 attempts) and fail states with CloudWatch logging.
 
-![alt text](<docs/Lab4-Step function.png>)
-
+![alt text](docs/Stepfn.png)
 **State Machine Definition** (simplified JSON):
 ```json
 {
