@@ -5,7 +5,7 @@ from pyspark.sql.functions import (
     avg, max as spark_max, min as spark_min, round
 )
 import sys # system library for command line arguments
-import logging 
+import logging
 
 # -----------------------------------------
 # Logging Setup
@@ -43,16 +43,23 @@ logger.info(f"Output path: {output_path}")
 # Load Raw Datasets
 # -----------------------------------------
 try:
-    rentals = spark.read.option("header", "true").csv(f"{input_path}/rental_transactions/") 
+    rentals = spark.read.option("header", "true").csv(f"{input_path}/rental_transactions/")
     users = spark.read.option("header", "true").csv(f"{input_path}/users/")
     logger.info("Successfully loaded users and transactions datasets.")
 except Exception as e:
     logger.error(f"Error loading data: {e}")
-    sys.exit(1) 
+    sys.exit(1)
 
 # -----------------------------------------
 # Data Type Casting and Enrichment
 # -----------------------------------------
+# Define required columns for 'rentals' for casting and feature engineering
+required_rental_cols = ["total_amount", "rental_start_time", "rental_end_time", "user_id"]
+if not set(required_rental_cols).issubset(rentals.columns):
+    missing_cols = list(set(required_rental_cols) - set(rentals.columns))
+    logger.error(f"Missing required columns in 'rentals' DataFrame: {missing_cols}")
+    sys.exit(1)
+
 rentals = rentals \
     .withColumn("total_amount", col("total_amount").cast("double")) \
     .withColumn("rental_start_time", unix_timestamp("rental_start_time", "yyyy-MM-dd HH:mm:ss")) \
@@ -63,12 +70,30 @@ rentals = rentals \
 # -----------------------------------------
 # Join with Users
 # -----------------------------------------
-rental_user_df = rentals.join(users, on="user_id", how="left") # Left join to include all rentals
+# Define required columns for 'users' for joining
+required_user_cols = ["user_id", "first_name", "last_name", "email"]
+if not set(required_user_cols).issubset(users.columns):
+    missing_cols = list(set(required_user_cols) - set(users.columns))
+    logger.error(f"Missing required columns in 'users' DataFrame: {missing_cols}")
+    sys.exit(1)
 
+# Ensure 'user_id' is present in rentals before join
+if "user_id" not in rentals.columns:
+    logger.error("Missing 'user_id' column in 'rentals' DataFrame, cannot perform join.")
+    sys.exit(1)
+
+rental_user_df = rentals.join(users, on="user_id", how="left") # Left join to include all rentals
 
 # -----------------------------------------
 # DAILY KPIs
 # -----------------------------------------
+# Validate columns for daily_kpis aggregation
+required_daily_kpi_cols = ["rental_date", "total_amount"]
+if not set(required_daily_kpi_cols).issubset(rental_user_df.columns):
+    missing_cols = list(set(required_daily_kpi_cols) - set(rental_user_df.columns))
+    logger.error(f"Missing required columns for daily KPIs aggregation: {missing_cols}")
+    sys.exit(1)
+
 daily_kpis = rental_user_df.groupBy("rental_date") \
     .agg(
         count("*").alias("daily_transaction_count"),
@@ -78,6 +103,13 @@ daily_kpis = rental_user_df.groupBy("rental_date") \
 # -----------------------------------------
 # USER KPIs
 # -----------------------------------------
+# Validate columns for user_kpis aggregation
+required_user_kpi_cols = ["user_id", "first_name", "last_name", "email", "total_amount", "rental_duration_hours"]
+if not set(required_user_kpi_cols).issubset(rental_user_df.columns):
+    missing_cols = list(set(required_user_kpi_cols) - set(rental_user_df.columns))
+    logger.error(f"Missing required columns for user KPIs aggregation: {missing_cols}")
+    sys.exit(1)
+
 user_kpis = rental_user_df.groupBy("user_id", "first_name", "last_name", "email") \
     .agg(
         count("*").alias("total_transactions"),
