@@ -68,7 +68,7 @@ The pipeline follows a modular, serverless architecture to ensure scalability an
 
 ### Architecture Diagram
 
-![alt text](docs/Lab4_architecture.drawio.svg)
+![alt text](docs/Lab4_architecture.drawio_new.svg)
 
 ### Key Components:
 
