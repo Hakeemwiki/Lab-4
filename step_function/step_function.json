@@ -1,165 +1,204 @@
 {
-    "Comment": "Car Rental Pipeline - Parallel Spark & Crawlers",
-    "StartAt": "Parallel Spark Jobs",
-    "States": {
-      "Parallel Spark Jobs": {
-        "Type": "Parallel",
-        "Branches": [
-          {
-            "StartAt": "Run Vehicle Metrics Job",
-            "States": {
-              "Run Vehicle Metrics Job": {
-                "Type": "Task",
-                "Resource": "arn:aws:states:::aws-sdk:emrserverless:startJobRun",
-                "Parameters": {
-                  "ClientToken": "vehicleMetrics_ExecutionName",
-                  "ApplicationId": "00ftforfooeca71d",
-                  "ExecutionRoleArn": "arn:aws:iam::396468676537:role/s3-full-access",
-                  "JobDriver": {
-                    "SparkSubmit": {
-                      "EntryPoint": "s3://car-rentals-data/scripts/vehicle_location_metrics.py",
-                      "EntryPointArguments": [
-                        "s3://car-rentals-data/raw/",
-                        "s3://car-rentals-data/processed/"
-                      ]
-                    }
-                  },
-                  "ConfigurationOverrides": {
-                    "MonitoringConfiguration": {
-                      "S3MonitoringConfiguration": {
-                        "LogUri": "s3://car-rentals-data/logs/"
-                      }
-                    }
+  "Comment": "Car Rental Pipeline - Parallel Spark, Crawlers, and Athena Query with Wait States",
+  "StartAt": "Parallel Spark Jobs",
+  "States": {
+    "Parallel Spark Jobs": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Run Vehicle Metrics Job",
+          "States": {
+            "Run Vehicle Metrics Job": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:emrserverless:startJobRun",
+              "Parameters": {
+                "ClientToken.$": "States.UUID()",
+                "ApplicationId": "00ftforfooeca71d",
+                "ExecutionRoleArn": "arn:aws:iam::396468676537:role/s3-full-access",
+                "JobDriver": {
+                  "SparkSubmit": {
+                    "EntryPoint": "s3://car-rentals-data/scripts/vehicle_location_metrics.py",
+                    "EntryPointArguments": [
+                      "s3://car-rentals-data/raw/",
+                      "s3://car-rentals-data/processed/"
+                    ]
                   }
                 },
-                "Retry": [
-                  {
-                    "ErrorEquals": ["States.ALL"],
-                    "IntervalSeconds": 30,
-                    "MaxAttempts": 3,
-                    "BackoffRate": 2.0
-                  }
-                ],
-                "Catch": [
-                  {
-                    "ErrorEquals": ["States.ALL"],
-                    "ResultPath": "$.error",
-                    "Next": "Vehicle Metrics Job Failed"
-                  }
-                ],
-                "End": true
-              },
-              "Vehicle Metrics Job Failed": {
-                "Type": "Fail",
-                "Error": "VehicleJobFailed",
-                "Cause": "Vehicle metrics Spark job failed."
-              }
-            }
-          },
-          {
-            "StartAt": "Run User Metrics Job",
-            "States": {
-              "Run User Metrics Job": {
-                "Type": "Task",
-                "Resource": "arn:aws:states:::aws-sdk:emrserverless:startJobRun",
-                "Parameters": {
-                  "ClientToken": "userMetrics_ExecutionName",
-                  "ApplicationId": "00ftforfooeca71d",
-                  "ExecutionRoleArn": "arn:aws:iam::396468676537:role/s3-full-access",
-                  "JobDriver": {
-                    "SparkSubmit": {
-                      "EntryPoint": "s3://car-rentals-data/scripts/user_transaction_metrics.py",
-                      "EntryPointArguments": [
-                        "s3://car-rentals-data/raw/",
-                        "s3://car-rentals-data/processed/"
-                      ]
-                    }
-                  },
-                  "ConfigurationOverrides": {
-                    "MonitoringConfiguration": {
-                      "S3MonitoringConfiguration": {
-                        "LogUri": "s3://car-rentals-data/logs/"
-                      }
+                "ConfigurationOverrides": {
+                  "MonitoringConfiguration": {
+                    "S3MonitoringConfiguration": {
+                      "LogUri": "s3://car-rentals-data/logs/"
                     }
                   }
-                },
-                "Retry": [
-                  {
-                    "ErrorEquals": ["States.ALL"],
-                    "IntervalSeconds": 30,
-                    "MaxAttempts": 3,
-                    "BackoffRate": 2.0
-                  }
-                ],
-                "Catch": [
-                  {
-                    "ErrorEquals": ["States.ALL"],
-                    "ResultPath": "$.error",
-                    "Next": "User Metrics Job Failed"
-                  }
-                ],
-                "End": true
+                }
               },
-              "User Metrics Job Failed": {
-                "Type": "Fail",
-                "Error": "UserJobFailed",
-                "Cause": "User metrics Spark job failed."
-              }
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 30,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "ResultPath": "$.error",
+                  "Next": "Vehicle Metrics Job Failed"
+                }
+              ],
+              "End": true
+            },
+            "Vehicle Metrics Job Failed": {
+              "Type": "Fail",
+              "Error": "VehicleJobFailed",
+              "Cause": "Vehicle metrics Spark job failed."
             }
           }
-        ],
-        "Next": "Parallel Glue Crawlers"
-      },
-  
-      "Parallel Glue Crawlers": {
-        "Type": "Parallel",
-        "Branches": [
-          {
-            "StartAt": "Run Vehicle-Location Crawler",
-            "States": {
-              "Run Vehicle-Location Crawler": {
-                "Type": "Task",
-                "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
-                "Parameters": {
-                  "Name": "vehicle-location-metrics-crawler"
+        },
+        {
+          "StartAt": "Run User Metrics Job",
+          "States": {
+            "Run User Metrics Job": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:emrserverless:startJobRun",
+              "Parameters": {
+                "ClientToken.$": "States.UUID()",
+                "ApplicationId": "00ftforfooeca71d",
+                "ExecutionRoleArn": "arn:aws:iam::396468676537:role/s3-full-access",
+                "JobDriver": {
+                  "SparkSubmit": {
+                    "EntryPoint": "s3://car-rentals-data/scripts/user_transaction_metrics.py",
+                    "EntryPointArguments": [
+                      "s3://car-rentals-data/raw/",
+                      "s3://car-rentals-data/processed/"
+                    ]
+                  }
                 },
-                "End": true
-              }
-            }
-          },
-          {
-            "StartAt": "Run User Metrics Crawler",
-            "States": {
-              "Run User Metrics Crawler": {
-                "Type": "Task",
-                "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
-                "Parameters": {
-                  "Name": "user-metrics-crawler"
-                },
-                "End": true
-              }
-            }
-          },
-          {
-            "StartAt": "Run Daily Metrics Crawler",
-            "States": {
-              "Run Daily Metrics Crawler": {
-                "Type": "Task",
-                "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
-                "Parameters": {
-                  "Name": "daily-metrics-crawler"
-                },
-                "End": true
-              }
+                "ConfigurationOverrides": {
+                  "MonitoringConfiguration": {
+                    "S3MonitoringConfiguration": {
+                      "LogUri": "s3://car-rentals-data/logs/"
+                    }
+                  }
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 30,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "ResultPath": "$.error",
+                  "Next": "User Metrics Job Failed"
+                }
+              ],
+              "End": true
+            },
+            "User Metrics Job Failed": {
+              "Type": "Fail",
+              "Error": "UserJobFailed",
+              "Cause": "User metrics Spark job failed."
             }
           }
-        ],
-        "Next": "Success State"
+        }
+      ],
+      "Next": "Wait After Spark Jobs"
+    },
+    "Wait After Spark Jobs": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Parallel Glue Crawlers"
+    },
+    "Parallel Glue Crawlers": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Run Vehicle-Location Crawler",
+          "States": {
+            "Run Vehicle-Location Crawler": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+              "Parameters": {
+                "Name": "vehicle-location-metrics-crawler"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Run User Metrics Crawler",
+          "States": {
+            "Run User Metrics Crawler": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+              "Parameters": {
+                "Name": "user-metrics-crawler"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Run Daily Metrics Crawler",
+          "States": {
+            "Run Daily Metrics Crawler": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+              "Parameters": {
+                "Name": "daily-metrics-crawler"
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Wait After Crawlers"
+    },
+    "Wait After Crawlers": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Athena Generate Summary Report"
+    },
+    "Athena Generate Summary Report": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:athena:startQueryExecution",
+      "Parameters": {
+        "QueryString": "SELECT pickup_location, SUM(total_revenue) AS total_rev FROM vlm_vehicle_location_metrics GROUP BY pickup_location ORDER BY total_rev DESC LIMIT 5",
+        "QueryExecutionContext": {
+          "Database": "car_rental_analytics"
+        },
+        "ResultConfiguration": {
+          "OutputLocation": "s3://car-rentals-data/query-results/"
+        }
       },
-  
-      "Success State": {
-        "Type": "Succeed"
-      }
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 15,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Success State"
+    },
+    "Success State": {
+      "Type": "Succeed"
     }
   }
-  
+}
