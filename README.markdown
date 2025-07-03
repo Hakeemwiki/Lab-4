@@ -70,6 +70,19 @@ The pipeline follows a modular, serverless architecture to ensure scalability an
 
 ![alt text](docs/Lab4_architecture.drawio_new.svg)
 
+## Flow
+- **Raw Data Ingestion:** Car rental data, along with scripts, is stored in an S3 bucket in a "raw" zone.
+
+- **Big Data Processing (ETL):** An AWS Step Functions workflow orchestrates the processing. It triggers an EMR Serverless cluster. This cluster runs PySpark scripts to process the raw data, likely performing transformations, cleaning, and converting it into an optimized format like Parquet, which is then stored in a "processed" S3 zone.
+
+- **Metadata Management:** After processing, Glue Crawlers are run (orchestrated by the Step Function). These crawlers scan the "processed" S3 data to gather metadata and update the Glue Data Catalog, making the schemas of the processed data available for querying.
+
+- **Querying and Analytics:** Amazon Athena queries the processed data using the metadata from the Glue Data Catalog. Athena writes its query results to an S3 "query-results" bucket.
+
+- **Monitoring and Logging:** CloudWatch monitors the pipeline and collects logs from various components, including the EMR Serverless processing and potentially Athena queries.
+
+- **Orchestration:** An AWS Step Functions workflow drives the entire pipeline, from initiating raw data processing to triggering crawlers and managing the flow. Logs from the EMR Serverless processing are also sent to CloudWatch.
+
 ### Key Components:
 
 - **Amazon S3**:
